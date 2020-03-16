@@ -1,38 +1,43 @@
 package checkit
 
-import "regexp"
+import (
+	"errors"
+	"reflect"
+	"regexp"
+	"time"
+)
 
 // Validating ...
 type Validating interface {
-	Validate(value interface{}) (bool, *string)
+	Validate(value interface{}) (bool, error)
 }
 
 // Accepted ...
 func Accepted() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
+		validateFunc: func(value interface{}) (bool, error) {
 			switch v := value.(type) {
 			case string:
 				acceptedValues := []string{"yes", "on", "1"}
-				return contains(acceptedValues, v)
+				return contains(acceptedValues, v), nil
 			case int8:
-				return v == 1
+				return v == 1, nil
 			case int16:
-				return v == 1
+				return v == 1, nil
 			case int32:
-				return v == 1
+				return v == 1, nil
 			case int64:
-				return v == 1
+				return v == 1, nil
 			case uint8:
-				return v == 1
+				return v == 1, nil
 			case uint16:
-				return v == 1
+				return v == 1, nil
 			case uint32:
-				return v == 1
+				return v == 1, nil
 			case uint64:
-				return v == 1
+				return v == 1, nil
 			default:
-				return false
+				return false, nil
 			}
 		},
 		errorMessage: "The value must be yes, on, or 1. This is useful for validating \"Terms of Service\" acceptance.",
@@ -42,8 +47,8 @@ func Accepted() Validating {
 // Aplha ...
 func Aplha() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
-			return matchAnyWithRegex(`^[a-zA-Z]+$`, value)
+		validateFunc: func(value interface{}) (bool, error) {
+			return matchAnyWithRegex(regexAlpha, value)
 		},
 		errorMessage: "The value must be entirely alphabetic characters.",
 	}
@@ -52,8 +57,8 @@ func Aplha() Validating {
 // AplhaDash ...
 func AplhaDash() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
-			return matchAnyWithRegex(`^[a-z0-9_\-]+$`, value)
+		validateFunc: func(value interface{}) (bool, error) {
+			return matchAnyWithRegex(regexAlphaDash, value)
 		},
 		errorMessage: "The value may have alpha-numeric characters, as well as dashes and underscores.",
 	}
@@ -62,8 +67,8 @@ func AplhaDash() Validating {
 // AplhaNumeric ...
 func AplhaNumeric() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
-			return matchAnyWithRegex(`^[a-zA-Z0-9]+$`, value)
+		validateFunc: func(value interface{}) (bool, error) {
+			return matchAnyWithRegex(regexAlphaNumeric, value)
 		},
 		errorMessage: "The value must be entirely alpha-numeric characters.",
 	}
@@ -72,45 +77,183 @@ func AplhaNumeric() Validating {
 // AplhaUnderscore ...
 func AplhaUnderscore() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
-			return matchAnyWithRegex(`^[a-zA-Z0-9_]+$`, value)
+		validateFunc: func(value interface{}) (bool, error) {
+			return matchAnyWithRegex(regexAlphaUnderscore, value)
 		},
 		errorMessage: "The value must be entirely alpha-numeric, with underscores but not dashes.",
+	}
+}
+
+// Array ...
+func Array() Validating {
+	return &validator{
+		validateFunc: func(value interface{}) (bool, error) {
+			switch reflect.TypeOf(value).Kind() {
+			case reflect.Array, reflect.Slice:
+				return true, nil
+			default:
+				return false, nil
+			}
+		},
+		errorMessage: "The value must be a valid array object.",
 	}
 }
 
 // Base64 ...
 func Base64() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
-			return matchAnyWithRegex(`^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)?$`, value)
+		validateFunc: func(value interface{}) (bool, error) {
+			return matchAnyWithRegex(regexBase64, value)
 		},
 		errorMessage: "The value must be a base64 encoded value.",
+	}
+}
+
+// Boolean ...
+func Boolean() Validating {
+	return &validator{
+		validateFunc: func(value interface{}) (bool, error) {
+			switch reflect.TypeOf(value).Kind() {
+			case reflect.Bool:
+				return true, nil
+			default:
+				return false, nil
+			}
+		},
+		errorMessage: "The value must be a boolean.",
+	}
+}
+
+// Date ...
+func Date() Validating {
+	return &validator{
+		validateFunc: func(value interface{}) (bool, error) {
+			switch value.(type) {
+			case time.Time:
+				return true, nil
+			default:
+				return false, nil
+			}
+		},
+		errorMessage: "The value must be a valid date object.",
 	}
 }
 
 // Email ...
 func Email() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
-			return matchAnyWithRegex(`^(.+)@(.+)\.(.+)$`, value)
+		validateFunc: func(value interface{}) (bool, error) {
+			return matchAnyWithRegex(regexEmail, value)
 		},
 		errorMessage: "The field must be a valid formatted e-mail address.",
+	}
+}
+
+// Empty ...
+func Empty() Validating {
+	return &validator{
+		validateFunc: func(value interface{}) (bool, error) {
+			switch v := value.(type) {
+			case []interface{}:
+				return len(v) == 0, nil
+			case string:
+				return len(v) == 0, nil
+			default:
+				return false, errors.New("len() is not supported")
+			}
+		},
+		errorMessage: "The value must be a empty collection.",
+	}
+}
+
+// ExactLength ...
+func ExactLength(length int) Validating {
+	return &validator{
+		validateFunc: func(value interface{}) (bool, error) {
+			switch v := value.(type) {
+			case []interface{}:
+				return len(v) == length, nil
+			case string:
+				return len(v) == length, nil
+			default:
+				return false, errors.New("len() is not supported")
+			}
+		},
+		errorMessage: "The field must have the exact length of \"val\".",
+	}
+}
+
+// Exists ...
+func Exists() Validating {
+	return &validator{
+		validateFunc: func(value interface{}) (bool, error) {
+			return value != nil, nil
+		},
+		errorMessage: "The value under validation must not be undefined or nil.",
+	}
+}
+
+// Function ...
+func Function() Validating {
+	return &validator{
+		validateFunc: func(value interface{}) (bool, error) {
+			switch reflect.TypeOf(value).Kind() {
+			case reflect.Func:
+				return true, nil
+			default:
+				return false, nil
+			}
+		},
+		errorMessage: "The value must be a function.",
+	}
+}
+
+// GreaterThan ...
+func GreaterThan(v interface{}) Validating {
+	return &validator{
+		validateFunc: func(value interface{}) (bool, error) {
+			lhsString, lokString := value.(string)
+			rhsString, rokString := value.(string)
+
+			if lokString && rokString {
+				return lhsString > rhsString, nil
+			} else if (lokString && !rokString) || (!lokString && rokString) {
+				return false, errors.New("Cannot compare a string to an instance of other type than string")
+			}
+
+			lhsGreaterThanZero, lhsErr := isGreaterThanZero(value)
+			if lhsErr != nil {
+				return false, lhsErr
+			}
+			rhsGreaterThanZero, rhsErr := isGreaterThanZero(v)
+			if rhsErr != nil {
+				return false, rhsErr
+			}
+			if lhsGreaterThanZero && !rhsGreaterThanZero {
+				return true, nil
+			}
+			if !lhsGreaterThanZero && rhsGreaterThanZero {
+				return false, nil
+			}
+
+			return false, nil
+		},
+		errorMessage: "The value under validation must be \"greater than\" the given value.",
 	}
 }
 
 // Integer ...
 func Integer() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
+		validateFunc: func(value interface{}) (bool, error) {
 			switch v := value.(type) {
 			case string:
-				return regexp.MustCompile(`^\-?[0-9]+$`).MatchString(v)
+				return regexp.MustCompile(regexInteger).MatchString(v), nil
 			case int8, int16, int32, int64,
 				uint8, uint16, uint32, uint64:
-				return true
+				return true, nil
 			}
-			return false
+			return false, nil
 		},
 		errorMessage: "The value must have an integer value.",
 	}
@@ -119,8 +262,8 @@ func Integer() Validating {
 // Ipv4 ...
 func Ipv4() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
-			return matchAnyWithRegex(`^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[0-9]{1,2})\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[0-9]{1,2})$`, value)
+		validateFunc: func(value interface{}) (bool, error) {
+			return matchAnyWithRegex(regexIpv4, value)
 		},
 		errorMessage: "The value must be formatted as an IPv4 address.",
 	}
@@ -129,8 +272,8 @@ func Ipv4() Validating {
 // Ipv6 ...
 func Ipv6() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
-			return matchAnyWithRegex(`^((?=.*::)(?!.*::.+::)(::)?([\dA-F]{1,4}:(:|\b)|){5}|([\dA-F]{1,4}:){6})((([\dA-F]{1,4}((?!\3)::|:\b|$))|(?!\2\3)){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})$`, value)
+		validateFunc: func(value interface{}) (bool, error) {
+			return matchAnyWithRegex(regexIpv6, value)
 		},
 		errorMessage: "The value must be formatted as an IPv6 address.",
 	}
@@ -139,8 +282,8 @@ func Ipv6() Validating {
 // Luhn ...
 func Luhn() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
-			return matchAnyWithRegex(`^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$`, value)
+		validateFunc: func(value interface{}) (bool, error) {
+			return matchAnyWithRegex(regexLuhn, value)
 		},
 		errorMessage: "The given value must pass a basic luhn (credit card) check regular expression.",
 	}
@@ -149,22 +292,22 @@ func Luhn() Validating {
 // Natural ...
 func Natural() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
+		validateFunc: func(value interface{}) (bool, error) {
 			switch v := value.(type) {
 			case string:
-				return regexp.MustCompile(`^[0-9]+$`).MatchString(v)
+				return regexp.MustCompile(regexNatural).MatchString(v), nil
 			case int8:
-				return v >= 0
+				return v >= 0, nil
 			case int16:
-				return v >= 0
+				return v >= 0, nil
 			case int32:
-				return v >= 0
+				return v >= 0, nil
 			case int64:
-				return v >= 0
+				return v >= 0, nil
 			case uint8, uint16, uint32, uint64:
-				return true
+				return true, nil
 			default:
-				return false
+				return false, errors.New("Cannot compare to zero")
 			}
 		},
 		errorMessage: "The value must be a natural number (a number greater than or equal to 0).",
@@ -174,39 +317,84 @@ func Natural() Validating {
 // NaturalNonZero ...
 func NaturalNonZero() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
+		validateFunc: func(value interface{}) (bool, error) {
 			switch v := value.(type) {
 			case string:
-				return regexp.MustCompile(`^[1-9][0-9]*$`).MatchString(v)
+				return regexp.MustCompile(regexNaturalNonZero).MatchString(v), nil
 			case int8:
-				return v > 0
+				return v > 0, nil
 			case int16:
-				return v > 0
+				return v > 0, nil
 			case int32:
-				return v > 0
+				return v > 0, nil
 			case int64:
-				return v > 0
+				return v > 0, nil
 			case uint8:
-				return v > 0
+				return v > 0, nil
 			case uint16:
-				return v > 0
+				return v > 0, nil
 			case uint32:
-				return v > 0
+				return v > 0, nil
 			case uint64:
-				return v > 0
+				return v > 0, nil
 			default:
-				return false
+				return false, errors.New("Cannot compare to zero")
 			}
 		},
 		errorMessage: "The value must be a natural number, greater than or equal to 1.",
 	}
 }
 
+// Object ...
+func Object() Validating {
+	return &validator{
+		validateFunc: func(value interface{}) (bool, error) {
+			switch reflect.TypeOf(value).Kind() {
+			case reflect.Invalid, reflect.Func, reflect.UnsafePointer:
+				return false, nil
+			default:
+				return true, nil
+			}
+		},
+		errorMessage: "The value must be a object.",
+	}
+}
+
+// PlainObject ...
+func PlainObject() Validating {
+	return &validator{
+		validateFunc: func(value interface{}) (bool, error) {
+			switch reflect.TypeOf(value).Kind() {
+			case reflect.Map:
+				return true, nil
+			default:
+				return false, nil
+			}
+		},
+		errorMessage: "The value must be a plain object.",
+	}
+}
+
+// String ...
+func String() Validating {
+	return &validator{
+		validateFunc: func(value interface{}) (bool, error) {
+			switch reflect.TypeOf(value).Kind() {
+			case reflect.String:
+				return true, nil
+			default:
+				return false, nil
+			}
+		},
+		errorMessage: "The value must be a function.",
+	}
+}
+
 // URL ...
 func URL() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
-			return matchAnyWithRegex(`^((http|https):\/\/(\w+:{0,1}\w*@)?(\S+)|)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$`, value)
+		validateFunc: func(value interface{}) (bool, error) {
+			return matchAnyWithRegex(regexURL, value)
 		},
 		errorMessage: "The value must be formatted as an URL.",
 	}
@@ -215,32 +403,128 @@ func URL() Validating {
 // UUID ...
 func UUID() Validating {
 	return &validator{
-		validateFunc: func(value interface{}) bool {
-			return matchAnyWithRegex(`^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`, value)
+		validateFunc: func(value interface{}) (bool, error) {
+			return matchAnyWithRegex(regexUUID, value)
 		},
 		errorMessage: "Passes for a validly formatted UUID.",
 	}
 }
 
-func matchAnyWithRegex(regex string, any interface{}) bool {
+const (
+	regexAlpha           = `/^[A_Za-z]+$/i`
+	regexAlphaDash       = `/^[A_Za-z0-9_\-]+$/i`
+	regexAlphaNumeric    = `/^[A_Za-z0-9]+$/i`
+	regexAlphaUnderscore = `/^[A_Za-z0-9_]+$/i`
+	regexBase64          = `/^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)?$/`
+	regexEmail           = `/^(.+)@(.+)\.(.+)$/i`
+	regexInteger         = `/^\-?[0-9]+$/`
+	regexIpv4            = `/^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[0-9]{1,2})\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[0-9]{1,2})$/i`
+	regexIpv6            = `/^((?=.*::)(?!.*::.+::)(::)?([\dA-F]{1,4}:(:|\b)|){5}|([\dA-F]{1,4}:){6})((([\dA-F]{1,4}((?!\3)::|:\b|$))|(?!\2\3)){2}|(((2[0-4]|1\d|[1-9])?\d|25[0-5])\.?\b){4})$/i`
+	regexLuhn            = `/^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/`
+	regexNatural         = `/^[0-9]+$/i`
+	regexNaturalNonZero  = `/^[1-9][0-9]*$/i`
+	regexURL             = `/^((http|https):\/\/(\w+:{0,1}\w*@)?(\S+)|)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$/`
+	regexUUID            = `/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i`
+)
+
+func matchAnyWithRegex(regex string, any interface{}) (bool, error) {
 	switch v := any.(type) {
 	case string:
-		return regexp.MustCompile(regex).MatchString(v)
+		return regexp.MustCompile(regex).MatchString(v), nil
+	default:
+		return false, errors.New("The value must be a string")
+	}
+}
+
+func isNumber(any interface{}) bool {
+	switch reflect.TypeOf(any).Kind() {
+	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return true
 	default:
 		return false
 	}
 }
 
-type validateFunc func(interface{}) bool
+func isGreaterThanZero(any interface{}) (bool, error) {
+	switch v := any.(type) {
+	case int8:
+		return v > 0, nil
+	case int16:
+		return v > 0, nil
+	case int32:
+		return v > 0, nil
+	case int64:
+		return v > 0, nil
+	case uint8:
+		return v > 0, nil
+	case uint16:
+		return v > 0, nil
+	case uint32:
+		return v > 0, nil
+	case uint64:
+		return v > 0, nil
+	default:
+		return false, errors.New("The value must be a number")
+	}
+}
+
+func tryConvertToInt64(v interface{}) (int64, bool) {
+	switch _v := v.(type) {
+	case int64:
+		return _v, true
+	case int32:
+		return int64(_v), true
+	case int16:
+		return int64(_v), true
+	case int8:
+		return int64(_v), true
+	default:
+		return 0, false
+	}
+}
+
+func tryConvertToUint64(v interface{}) (uint64, bool) {
+	switch _v := v.(type) {
+	case uint64:
+		return _v, true
+	case uint32:
+		return uint64(_v), true
+	case uint16:
+		return uint64(_v), true
+	case uint8:
+		return uint64(_v), true
+	default:
+		return 0, false
+	}
+}
+
+func tryConvertToFloat64(v interface{}) (float64, bool) {
+	switch _v := v.(type) {
+	case float64:
+		return _v, true
+	case float32:
+		return float64(_v), true
+	default:
+		return 0, false
+	}
+}
+
+type validateFunc func(interface{}) (bool, error)
 
 type validator struct {
 	validateFunc validateFunc
 	errorMessage string
 }
 
-func (v *validator) Validate(value interface{}) (bool, *string) {
-	if v.validateFunc(value) {
+func (v *validator) Validate(value interface{}) (bool, error) {
+	result, err := v.validateFunc(value)
+	if result {
 		return true, nil
 	}
-	return false, &v.errorMessage
+	if err != nil {
+		return false, err
+	}
+	return false, errors.New(v.errorMessage)
 }
