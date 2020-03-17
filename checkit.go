@@ -1,48 +1,55 @@
 package checkit
 
+import "strings"
+
 // Validator ...
 type Validator map[string]Validating
 
 // ValidateSync ...
-func ValidateSync(any interface{}, validator Validator) (bool, error) {
-	return validator.ValidateSync(any)
+func ValidateSync(value interface{}, validator Validator) (bool, error) {
+	return validator.ValidateSync(value)
+}
+
+// MayBeSync ...
+func MayBeSync(value interface{}, validator Validator) (bool, error) {
+	return validator.MayBeSync(value)
 }
 
 // ValidateSync ...
-func (v Validator) ValidateSync(any interface{}) (bool, error) {
+func (v Validator) ValidateSync(value interface{}) (bool, error) {
 	for keyPath, validating := range v {
-		_test, _isResultAny, _isResultAll := getValueWithKeyPath(keyPath, any)
-		if _isResultAll {
-			_testArr, _ := _test.([]interface{})
-			for _, _el := range _testArr {
-				_r, _err := validating.Validate(_el)
-				if _err != nil {
-					return false, _err
-				}
-				if !_r {
-					return false, nil
-				}
-			}
-		} else if _isResultAny {
-			_testArr, _ := _test.([]interface{})
-			var _resultAny bool = true
-			for _, _el := range _testArr {
-				_r, _err := validating.Validate(_el)
-				if _err != nil {
-					return false, _err
-				}
-				_resultAny = _resultAny || _r
-			}
-			if !_resultAny {
-				return false, nil
-			}
-		} else {
-			_result, _err := validating.Validate(_test)
-			if _err != nil {
-				return false, _err
-			}
-			return _result, nil
+		r, err := validateKeyPathWithValidating(value, keyPath, validating)
+		if err != nil {
+			return false, err
+		}
+		if !r {
+			return false, nil
 		}
 	}
+	return true, nil
+}
+
+// MayBeSync ...
+func (v Validator) MayBeSync(value interface{}) (bool, error) {
+	var result bool = true
+	for keyPath, validating := range v {
+		r, _ := validateKeyPathWithValidating(value, keyPath, validating)
+		result = result || r
+	}
+	return result, nil
+}
+
+func validateKeyPathWithValidating(value interface{}, keyPath string, validating Validating) (bool, error) {
+	keys := strings.Split(keyPath, ".")
+	var root *wrappedKeyedValue
+	root = makeNormalWrappedKeyedValue(value, nil)
+	var result *wrappedKeyedValue = root
+	for _, k := range keys {
+		result = makeWrappedValueWithKey(k, result)
+	}
+	return true, nil
+}
+
+func (w *wrappedKeyedValue) validateWithValidating(valldating Validating) (bool, error) {
 	return true, nil
 }

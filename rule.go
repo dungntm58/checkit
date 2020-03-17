@@ -19,15 +19,16 @@ type CompoundValidating []Validating
 
 // Validate ...
 func (c CompoundValidating) Validate(value interface{}) (bool, error) {
-	var result bool
 	for _, v := range c {
 		_r, err := v.Validate(value)
 		if err != nil {
 			return false, err
 		}
-		result = result && _r
+		if !_r {
+			return false, nil
+		}
 	}
-	return result, nil
+	return true, nil
 }
 
 // Accepted ...
