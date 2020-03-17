@@ -13,33 +13,35 @@ const (
 	keyLast  = "last"
 )
 
-const (
-	invalidArrayIndex     = -1
-	virtualLastArrayIndex = -2
-	anyArrayIndex         = -3
-	allArrayIndex         = -4
-)
-
-func getValueWithKeyPath(keyPath string, any interface{}) (value interface{}, isAnyResult bool) {
+func getValueWithKeyPath(keyPath string, any interface{}) (value interface{}, isResultAny bool, isResultAll bool) {
 	keys := strings.Split(keyPath, ".")
-	isAnyResult = contains(keys, keyAny)
+	isResultAny = contains(keys, keyAny)
+	isResultAll = contains(keys, keyAll)
 
 	var result interface{}
 	result = any
 	for _, k := range keys {
-		result = getValueWithKey(k, result)
+		shouldMap := k == keyAny || k == keyAll
+		result = getValueWithKey(k, result, shouldMap)
 	}
 	value = result
 	return
 }
 
-func getValueWithKey(key string, any interface{}) interface{} {
+func getValueWithKey(key string, any interface{}, shouldMap bool) interface{} {
 	switch v := any.(type) {
 	case []interface{}:
 		switch key {
 		case keyAll:
 		case keyAny:
-			return v
+			if !shouldMap {
+				return v
+			}
+			var result []interface{}
+			for _, el := range v {
+				result = append(result, getValueWithKey(key, el, false))
+			}
+			return result
 		case keyFirst:
 			return v[0]
 		case keyLast:
@@ -67,20 +69,20 @@ func getValueWithKey(key string, any interface{}) interface{} {
 			return v[int64(intValue)]
 		}
 	case map[uint8]interface{}:
-		if intValue, err := strconv.ParseUint(key, 10, 8); err == nil {
-			return v[uint8(intValue)]
+		if uintValue, err := strconv.ParseUint(key, 10, 8); err == nil {
+			return v[uint8(uintValue)]
 		}
 	case map[uint16]interface{}:
-		if intValue, err := strconv.ParseUint(key, 10, 16); err == nil {
-			return v[uint16(intValue)]
+		if uintValue, err := strconv.ParseUint(key, 10, 16); err == nil {
+			return v[uint16(uintValue)]
 		}
 	case map[uint32]interface{}:
-		if intValue, err := strconv.ParseUint(key, 10, 32); err == nil {
-			return v[uint32(intValue)]
+		if uintValue, err := strconv.ParseUint(key, 10, 32); err == nil {
+			return v[uint32(uintValue)]
 		}
 	case map[uint64]interface{}:
-		if intValue, err := strconv.ParseUint(key, 10, 64); err == nil {
-			return v[uint64(intValue)]
+		if uintValue, err := strconv.ParseUint(key, 10, 64); err == nil {
+			return v[uint64(uintValue)]
 		}
 	case map[string]interface{}:
 		return v[key]
