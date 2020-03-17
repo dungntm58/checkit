@@ -748,3 +748,12 @@ func (v *validator) Validate(value interface{}) (bool, error) {
 	}
 	return false, errors.New(v.errorMessage)
 }
+
+func contains(arr []string, check string) bool {
+	for _, e := range arr {
+		if e == check {
+			return true
+		}
+	}
+	return false
+}

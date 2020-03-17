@@ -31,7 +31,7 @@ func (v Validator) ValidateSync(value interface{}) (bool, error) {
 
 // MayBeSync ...
 func (v Validator) MayBeSync(value interface{}) (bool, error) {
-	var result bool = true
+	var result bool = false
 	for keyPath, validating := range v {
 		r, _ := validateKeyPathWithValidating(value, keyPath, validating)
 		result = result || r
@@ -40,16 +40,42 @@ func (v Validator) MayBeSync(value interface{}) (bool, error) {
 }
 
 func validateKeyPathWithValidating(value interface{}, keyPath string, validating Validating) (bool, error) {
-	keys := strings.Split(keyPath, ".")
-	var root *wrappedKeyedValue
-	root = makeNormalWrappedKeyedValue(value, nil)
-	var result *wrappedKeyedValue = root
-	for _, k := range keys {
-		result = makeWrappedValueWithKey(k, result)
+	var keys []string = []string{}
+	for _, k := range strings.Split(keyPath, ".") {
+		if len(k) > 0 {
+			keys = append(keys, k)
+		}
 	}
-	return true, nil
+	if len(keys) == 0 {
+		return validating.Validate(value)
+	}
+
+	rootWrapped := makeNormalWrappedKeyedValue(value, nil)
+	root := &rootWrapped
+	buildWrappedKeyValueWithKeys(keys, 0, value, root)
+
+	return root.validateWithValidating(validating)
 }
 
-func (w *wrappedKeyedValue) validateWithValidating(valldating Validating) (bool, error) {
-	return true, nil
+func (w *wrappedKeyedValue) validateWithValidating(validating Validating) (bool, error) {
+	if w.shouldValidateAll {
+		for _, child := range w.children {
+			r, err := child.validateWithValidating(validating)
+			if err != nil {
+				return false, err
+			}
+			if !r {
+				return false, nil
+			}
+		}
+		return true, nil
+	} else if w.shouldValidateAny {
+		var result bool = false
+		for _, child := range w.children {
+			r, _ := child.validateWithValidating(validating)
+			result = result || r
+		}
+		return result, nil
+	}
+	return validating.Validate(w.value)
 }

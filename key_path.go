@@ -18,99 +18,112 @@ type wrappedKeyedValue struct {
 	shouldValidateAny  bool
 	shouldValidateAll  bool
 
-	next *wrappedKeyedValue
+	children []wrappedKeyedValue
 }
 
-func makeWrappedValueWithKey(key string, parent *wrappedKeyedValue) *wrappedKeyedValue {
-	switch v := parent.value.(type) {
+func getValueForKey(key string, obj interface{}) interface{} {
+	switch v := obj.(type) {
 	case []interface{}:
 		switch key {
-		case keyAll:
-			return makeWrappedKeyedValue(v, false, true, parent)
-		case keyAny:
-			return makeWrappedKeyedValue(v, true, false, parent)
+		case keyAll, keyAny:
+			return v
 		case keyFirst:
-			return makeNormalWrappedKeyedValue(v[0], parent)
+			return v[0]
 		case keyLast:
-			return makeNormalWrappedKeyedValue(v[len(v)-1], parent)
+			return v[len(v)-1]
 		default:
 			if intValue, err := strconv.Atoi(key); err == nil {
-				return makeNormalWrappedKeyedValue(v[intValue], parent)
+				return v[intValue]
 			}
 		}
 	case map[int8]interface{}:
 		if intValue, err := strconv.ParseInt(key, 10, 8); err == nil {
-			return makeNormalWrappedKeyedValue(v[int8(intValue)], parent)
+			return v[int8(intValue)]
 		}
 	case map[int16]interface{}:
 		if intValue, err := strconv.ParseInt(key, 10, 16); err == nil {
-			return makeNormalWrappedKeyedValue(v[int16(intValue)], parent)
+			return v[int16(intValue)]
 		}
 	case map[int32]interface{}:
 		if intValue, err := strconv.ParseInt(key, 10, 32); err == nil {
-			return makeNormalWrappedKeyedValue(v[int32(intValue)], parent)
+			return v[int32(intValue)]
 		}
 	case map[int64]interface{}:
 		if intValue, err := strconv.ParseInt(key, 10, 64); err == nil {
-			return makeNormalWrappedKeyedValue(v[int64(intValue)], parent)
+			return v[int64(intValue)]
 		}
 	case map[uint8]interface{}:
 		if uintValue, err := strconv.ParseUint(key, 10, 8); err == nil {
-			return makeNormalWrappedKeyedValue(v[uint8(uintValue)], parent)
+			return v[uint8(uintValue)]
 		}
 	case map[uint16]interface{}:
 		if uintValue, err := strconv.ParseUint(key, 10, 16); err == nil {
-			return makeNormalWrappedKeyedValue(v[uint16(uintValue)], parent)
+			return v[uint16(uintValue)]
 		}
 	case map[uint32]interface{}:
 		if uintValue, err := strconv.ParseUint(key, 10, 32); err == nil {
-			return makeNormalWrappedKeyedValue(v[uint32(uintValue)], parent)
+			return v[uint32(uintValue)]
 		}
 	case map[uint64]interface{}:
 		if uintValue, err := strconv.ParseUint(key, 10, 64); err == nil {
-			return makeNormalWrappedKeyedValue(v[uint64(uintValue)], parent)
+			return v[uint64(uintValue)]
 		}
 	case map[string]interface{}:
-		return makeNormalWrappedKeyedValue(v[key], parent)
+		return v[key]
 	default:
-		structValue := reflect.ValueOf(parent.value).Elem()
+		structValue := reflect.ValueOf(obj).Elem()
 		structType := structValue.Type()
 		for i := 0; i < structValue.NumField(); i++ {
 			if structType.Field(i).Name == key {
-				return makeNormalWrappedKeyedValue(structValue.Field(i).Interface(), parent)
+				return structValue.Field(i).Interface()
 			}
 		}
 	}
 	return nil
 }
 
-func makeNormalWrappedKeyedValue(value interface{}, parent *wrappedKeyedValue) *wrappedKeyedValue {
-	return &wrappedKeyedValue{
+func makeNormalWrappedKeyedValue(value interface{}, parent *wrappedKeyedValue) wrappedKeyedValue {
+	newWrappedKeyedValue := wrappedKeyedValue{
 		value:              value,
 		shouldValidateNorm: true,
 		shouldValidateAny:  false,
 		shouldValidateAll:  false,
-		next:               nil,
+		children:           []wrappedKeyedValue{},
 	}
-}
-
-func makeWrappedKeyedValue(value interface{}, shouldValidateAny bool, shouldValidateAll bool, parent *wrappedKeyedValue) *wrappedKeyedValue {
-	newWrappedKeyedValue := &wrappedKeyedValue{
-		value:              value,
-		shouldValidateNorm: false,
-		shouldValidateAny:  shouldValidateAny,
-		shouldValidateAll:  shouldValidateAll,
-		next:               nil,
+	if parent != nil {
+		parent.children = append(parent.children, newWrappedKeyedValue)
 	}
-	parent.next = newWrappedKeyedValue
 	return newWrappedKeyedValue
 }
 
-func contains(arr []string, check string) bool {
-	for _, e := range arr {
-		if e == check {
-			return true
-		}
+func buildWrappedKeyValueWithKeys(keys []string, keyIndex int, value interface{}, parent *wrappedKeyedValue) {
+	if keyIndex == len(keys) {
+		return
 	}
-	return false
+	key := keys[keyIndex]
+	keyedValue := getValueForKey(key, value)
+	if keyedValue == nil {
+		return
+	}
+	switch key {
+	case keyAny:
+		arr, _ := keyedValue.([]interface{})
+		parent.shouldValidateAny = true
+		parent.shouldValidateAll = false
+		parent.shouldValidateNorm = false
+		for _, el := range arr {
+			buildWrappedKeyValueWithKeys(keys, keyIndex+1, el, parent)
+		}
+	case keyAll:
+		arr, _ := keyedValue.([]interface{})
+		parent.shouldValidateAny = false
+		parent.shouldValidateAll = true
+		parent.shouldValidateNorm = false
+		for _, el := range arr {
+			buildWrappedKeyValueWithKeys(keys, keyIndex+1, el, parent)
+		}
+	default:
+		newWrappedKeyedValue := makeNormalWrappedKeyedValue(keyedValue, parent)
+		buildWrappedKeyValueWithKeys(keys, keyIndex+1, keyedValue, &newWrappedKeyedValue)
+	}
 }
