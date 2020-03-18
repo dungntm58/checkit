@@ -50,8 +50,7 @@ func validateKeyPathWithValidating(value interface{}, keyPath string, validating
 		return validating.Validate(value)
 	}
 
-	rootWrapped := makeNormalWrappedKeyedValue(value, nil)
-	root := &rootWrapped
+	root := makeNormalWrappedKeyedValue(value, nil)
 	buildWrappedKeyValueWithKeys(keys, 0, value, root)
 
 	return root.validateWithValidating(validating)

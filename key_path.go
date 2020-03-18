@@ -18,77 +18,139 @@ type wrappedKeyedValue struct {
 	shouldValidateAny  bool
 	shouldValidateAll  bool
 
-	children []wrappedKeyedValue
+	children []*wrappedKeyedValue
 }
 
 func getValueForKey(key string, obj interface{}) interface{} {
-	switch v := obj.(type) {
-	case []interface{}:
+	objValue := reflect.ValueOf(obj)
+	switch objValue.Kind() {
+	case reflect.Array, reflect.Slice:
 		switch key {
 		case keyAll, keyAny:
-			return v
+			return obj
 		case keyFirst:
-			return v[0]
+			return getReferenceValue(objValue.Index(0))
 		case keyLast:
-			return v[len(v)-1]
+			return getReferenceValue(objValue.Index(objValue.Len() - 1))
 		default:
 			if intValue, err := strconv.Atoi(key); err == nil {
-				return v[intValue]
+				return getReferenceValue(objValue.Index(intValue))
 			}
+			return nil
 		}
-	case map[int8]interface{}:
-		if intValue, err := strconv.ParseInt(key, 10, 8); err == nil {
-			return v[int8(intValue)]
+	case reflect.Map:
+		mapKeys := objValue.MapKeys()
+		if len(mapKeys) == 0 {
+			return nil
 		}
-	case map[int16]interface{}:
-		if intValue, err := strconv.ParseInt(key, 10, 16); err == nil {
-			return v[int16(intValue)]
+		reflectValueOfKey := getReflectKeyInMapKeys(mapKeys, key)
+		reflectValueOfValue := objValue.MapIndex(reflectValueOfKey)
+		if reflectValueOfValue.Kind() == reflect.Invalid {
+			return nil
 		}
-	case map[int32]interface{}:
-		if intValue, err := strconv.ParseInt(key, 10, 32); err == nil {
-			return v[int32(intValue)]
-		}
-	case map[int64]interface{}:
-		if intValue, err := strconv.ParseInt(key, 10, 64); err == nil {
-			return v[int64(intValue)]
-		}
-	case map[uint8]interface{}:
-		if uintValue, err := strconv.ParseUint(key, 10, 8); err == nil {
-			return v[uint8(uintValue)]
-		}
-	case map[uint16]interface{}:
-		if uintValue, err := strconv.ParseUint(key, 10, 16); err == nil {
-			return v[uint16(uintValue)]
-		}
-	case map[uint32]interface{}:
-		if uintValue, err := strconv.ParseUint(key, 10, 32); err == nil {
-			return v[uint32(uintValue)]
-		}
-	case map[uint64]interface{}:
-		if uintValue, err := strconv.ParseUint(key, 10, 64); err == nil {
-			return v[uint64(uintValue)]
-		}
-	case map[string]interface{}:
-		return v[key]
+		return reflectValueOfValue.Interface()
+	case reflect.Interface, reflect.Ptr:
+		objValue = flattenReflectValue(objValue)
+		fallthrough
+	case reflect.Struct:
+		fieldByName := objValue.FieldByName(key)
+		return getReferenceValue(fieldByName)
 	default:
-		structValue := reflect.ValueOf(obj).Elem()
-		structType := structValue.Type()
-		for i := 0; i < structValue.NumField(); i++ {
-			if structType.Field(i).Name == key {
-				return structValue.Field(i).Interface()
-			}
-		}
+		break
 	}
 	return nil
 }
 
-func makeNormalWrappedKeyedValue(value interface{}, parent *wrappedKeyedValue) wrappedKeyedValue {
-	newWrappedKeyedValue := wrappedKeyedValue{
+func getReflectKeyInMapKeys(mapKeys []reflect.Value, key string) reflect.Value {
+	for _, reflectKey := range mapKeys {
+		itKey := reflectKey.Interface()
+		switch itVal := itKey.(type) {
+		case string:
+			if key == itVal {
+				return reflectKey
+			}
+		case int8:
+			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && int8(intValue) == itVal {
+				return reflectKey
+			}
+		case int16:
+			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && int16(intValue) == itVal {
+				return reflectKey
+			}
+		case int32:
+			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && int32(intValue) == itVal {
+				return reflectKey
+			}
+		case int64:
+			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && int64(intValue) == itVal {
+				return reflectKey
+			}
+		case uint8:
+			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && uint8(intValue) == itVal {
+				return reflectKey
+			}
+		case uint16:
+			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && uint16(intValue) == itVal {
+				return reflectKey
+			}
+		case uint32:
+			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && uint32(intValue) == itVal {
+				return reflectKey
+			}
+		case uint64:
+			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && uint64(intValue) == itVal {
+				return reflectKey
+			}
+		default:
+			continue
+		}
+	}
+	return reflect.Value{}
+}
+
+func flattenReflectValue(value reflect.Value) reflect.Value {
+	val := value
+	kind := val.Kind()
+	for (kind == reflect.Interface || kind == reflect.Ptr) && !val.IsNil() {
+		val = val.Elem()
+		kind = val.Kind()
+	}
+	return val
+}
+
+func getReferenceValue(value reflect.Value) interface{} {
+	v := flattenReflectValue(value)
+	if v.Kind() == reflect.Invalid {
+		return nil
+	}
+	if v.CanInterface() {
+		return v.Interface()
+	}
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return v.Uint()
+	case reflect.Float32, reflect.Float64:
+		return v.Float()
+	case reflect.Bool:
+		return v.Bool()
+	case reflect.String:
+		return v.String()
+	case reflect.Array, reflect.Slice:
+		return v.Slice(0, v.Len())
+	default:
+		return nil
+	}
+}
+
+func makeNormalWrappedKeyedValue(value interface{}, parent *wrappedKeyedValue) *wrappedKeyedValue {
+	newWrappedKeyedValue := &wrappedKeyedValue{
 		value:              value,
 		shouldValidateNorm: true,
 		shouldValidateAny:  false,
 		shouldValidateAll:  false,
-		children:           []wrappedKeyedValue{},
+		children:           []*wrappedKeyedValue{},
 	}
 	if parent != nil {
 		parent.children = append(parent.children, newWrappedKeyedValue)
@@ -101,29 +163,39 @@ func buildWrappedKeyValueWithKeys(keys []string, keyIndex int, value interface{}
 		return
 	}
 	key := keys[keyIndex]
+	// fmt.Println("Next loop keyIndex", keyIndex, "key", key, "value", value, "parent", parent)
 	keyedValue := getValueForKey(key, value)
+	// fmt.Println("keyedValue", keyedValue, "key", key)
 	if keyedValue == nil {
 		return
 	}
 	switch key {
 	case keyAny:
-		arr, _ := keyedValue.([]interface{})
 		parent.shouldValidateAny = true
 		parent.shouldValidateAll = false
 		parent.shouldValidateNorm = false
-		for _, el := range arr {
-			buildWrappedKeyValueWithKeys(keys, keyIndex+1, el, parent)
+
+		arrValue := reflect.ValueOf(keyedValue)
+		for i := 0; i < arrValue.Len(); i++ {
+			el := getReferenceValue(arrValue.Index(i))
+			// fmt.Println("el", el)
+			newWrappedKeyedValue := makeNormalWrappedKeyedValue(el, parent)
+			buildWrappedKeyValueWithKeys(keys, keyIndex+1, el, newWrappedKeyedValue)
 		}
 	case keyAll:
-		arr, _ := keyedValue.([]interface{})
 		parent.shouldValidateAny = false
 		parent.shouldValidateAll = true
 		parent.shouldValidateNorm = false
-		for _, el := range arr {
-			buildWrappedKeyValueWithKeys(keys, keyIndex+1, el, parent)
+
+		arrValue := reflect.ValueOf(keyedValue)
+		for i := 0; i < arrValue.Len(); i++ {
+			el := getReferenceValue(arrValue.Index(i))
+			// fmt.Println("el", el)
+			newWrappedKeyedValue := makeNormalWrappedKeyedValue(el, parent)
+			buildWrappedKeyValueWithKeys(keys, keyIndex+1, el, newWrappedKeyedValue)
 		}
 	default:
 		newWrappedKeyedValue := makeNormalWrappedKeyedValue(keyedValue, parent)
-		buildWrappedKeyValueWithKeys(keys, keyIndex+1, keyedValue, &newWrappedKeyedValue)
+		buildWrappedKeyValueWithKeys(keys, keyIndex+1, keyedValue, newWrappedKeyedValue)
 	}
 }
