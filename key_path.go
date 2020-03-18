@@ -138,7 +138,12 @@ func getReferenceValue(value reflect.Value) interface{} {
 	case reflect.String:
 		return v.String()
 	case reflect.Array, reflect.Slice:
-		return v.Slice(0, v.Len())
+		var arr = []interface{}{}
+		for i := 0; i < v.Len(); i++ {
+			el := getReferenceValue(v.Index(i))
+			arr = append(arr, el)
+		}
+		return arr
 	default:
 		return nil
 	}
@@ -163,9 +168,7 @@ func buildWrappedKeyValueWithKeys(keys []string, keyIndex int, value interface{}
 		return
 	}
 	key := keys[keyIndex]
-	// fmt.Println("Next loop keyIndex", keyIndex, "key", key, "value", value, "parent", parent)
 	keyedValue := getValueForKey(key, value)
-	// fmt.Println("keyedValue", keyedValue, "key", key)
 	if keyedValue == nil {
 		return
 	}
@@ -178,7 +181,6 @@ func buildWrappedKeyValueWithKeys(keys []string, keyIndex int, value interface{}
 		arrValue := reflect.ValueOf(keyedValue)
 		for i := 0; i < arrValue.Len(); i++ {
 			el := getReferenceValue(arrValue.Index(i))
-			// fmt.Println("el", el)
 			newWrappedKeyedValue := makeNormalWrappedKeyedValue(el, parent)
 			buildWrappedKeyValueWithKeys(keys, keyIndex+1, el, newWrappedKeyedValue)
 		}
@@ -190,7 +192,6 @@ func buildWrappedKeyValueWithKeys(keys []string, keyIndex int, value interface{}
 		arrValue := reflect.ValueOf(keyedValue)
 		for i := 0; i < arrValue.Len(); i++ {
 			el := getReferenceValue(arrValue.Index(i))
-			// fmt.Println("el", el)
 			newWrappedKeyedValue := makeNormalWrappedKeyedValue(el, parent)
 			buildWrappedKeyValueWithKeys(keys, keyIndex+1, el, newWrappedKeyedValue)
 		}

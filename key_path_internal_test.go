@@ -1,7 +1,6 @@
 package checkit
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 )
@@ -38,7 +37,6 @@ func TestComplexNestedStruct(t *testing.T) {
 	if len(root.children[0].children) != 1 {
 		t.Errorf("Root first grand children count must be %d", 1)
 	}
-	fmt.Println(root.children[0].children[0].children)
 	if len(root.children[0].children[0].children) != 2 {
 		t.Errorf("Root first grand grand children count must be %d", 2)
 	}
