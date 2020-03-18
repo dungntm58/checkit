@@ -57,18 +57,7 @@ func validateKeyPathWithValidating(value interface{}, keyPath string, validating
 }
 
 func (w *wrappedKeyedValue) validateWithValidating(validating Validating) (bool, error) {
-	if w.shouldValidateAll {
-		for _, child := range w.children {
-			r, err := child.validateWithValidating(validating)
-			if err != nil {
-				return false, err
-			}
-			if !r {
-				return false, nil
-			}
-		}
-		return true, nil
-	} else if w.shouldValidateAny {
+	if w.shouldValidateAny {
 		var result bool = false
 		for _, child := range w.children {
 			r, _ := child.validateWithValidating(validating)
@@ -76,5 +65,18 @@ func (w *wrappedKeyedValue) validateWithValidating(validating Validating) (bool,
 		}
 		return result, nil
 	}
-	return validating.Validate(w.value)
+	// Children is empty so just validate the value
+	if len(w.children) == 0 {
+		return validating.Validate(w.value)
+	}
+	for _, child := range w.children {
+		r, err := child.validateWithValidating(validating)
+		if err != nil {
+			return false, err
+		}
+		if !r {
+			return false, nil
+		}
+	}
+	return true, nil
 }

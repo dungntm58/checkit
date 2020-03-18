@@ -167,6 +167,7 @@ func buildWrappedKeyValueWithKeys(keys []string, keyIndex int, value interface{}
 	if keyIndex == len(keys) {
 		return
 	}
+	parent.value = nil
 	key := keys[keyIndex]
 	keyedValue := getValueForKey(key, value)
 	if keyedValue == nil {
