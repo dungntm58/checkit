@@ -69,36 +69,44 @@ func getReflectKeyInMapKeys(mapKeys []reflect.Value, key string) reflect.Value {
 			if key == itVal {
 				return reflectKey
 			}
+		case int:
+			if intValue, err := strconv.Atoi(key); err == nil && intValue == itVal {
+				return reflectKey
+			}
 		case int8:
 			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && int8(intValue) == itVal {
 				return reflectKey
 			}
 		case int16:
-			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && int16(intValue) == itVal {
+			if intValue, err := strconv.ParseInt(key, 10, 16); err == nil && int16(intValue) == itVal {
 				return reflectKey
 			}
 		case int32:
-			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && int32(intValue) == itVal {
+			if intValue, err := strconv.ParseInt(key, 10, 32); err == nil && int32(intValue) == itVal {
 				return reflectKey
 			}
 		case int64:
-			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && int64(intValue) == itVal {
+			if intValue, err := strconv.ParseInt(key, 10, 64); err == nil && int64(intValue) == itVal {
+				return reflectKey
+			}
+		case uint:
+			if intValue, err := strconv.ParseUint(key, 10, strconv.IntSize); err == nil && uint(intValue) == itVal {
 				return reflectKey
 			}
 		case uint8:
-			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && uint8(intValue) == itVal {
+			if intValue, err := strconv.ParseUint(key, 10, 8); err == nil && uint8(intValue) == itVal {
 				return reflectKey
 			}
 		case uint16:
-			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && uint16(intValue) == itVal {
+			if intValue, err := strconv.ParseUint(key, 10, 16); err == nil && uint16(intValue) == itVal {
 				return reflectKey
 			}
 		case uint32:
-			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && uint32(intValue) == itVal {
+			if intValue, err := strconv.ParseUint(key, 10, 32); err == nil && uint32(intValue) == itVal {
 				return reflectKey
 			}
 		case uint64:
-			if intValue, err := strconv.ParseInt(key, 10, 8); err == nil && uint64(intValue) == itVal {
+			if intValue, err := strconv.ParseUint(key, 10, 64); err == nil && uint64(intValue) == itVal {
 				return reflectKey
 			}
 		default:

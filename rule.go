@@ -39,6 +39,8 @@ func Accepted() Validating {
 			case string:
 				acceptedValues := []string{"yes", "on", "1"}
 				return contains(acceptedValues, strings.ToLower(v)), nil
+			case int:
+				return v == 1, nil
 			case int8:
 				return v == 1, nil
 			case int16:
@@ -46,6 +48,8 @@ func Accepted() Validating {
 			case int32:
 				return v == 1, nil
 			case int64:
+				return v == 1, nil
+			case uint:
 				return v == 1, nil
 			case uint8:
 				return v == 1, nil
@@ -170,7 +174,8 @@ func Contains(v interface{}) Validating {
 				return false, newInternalError("The value must be an array or a slice")
 			}
 			for i := 0; i < arr.Len(); i++ {
-				if arr.Index(i).Interface() == v {
+				el := getReferenceValue(arr.Index(i))
+				if el == v {
 					return true, nil
 				}
 			}
@@ -257,8 +262,8 @@ func Finite() Validating {
 					return true, nil
 				}
 				return !math.IsInf(v, 0), nil
-			case int8, int16, int32, int64,
-				uint8, uint16, uint32, uint64, float32:
+			case int, int8, int16, int32, int64,
+				uint, uint8, uint16, uint32, uint64, float32:
 				return true, nil
 			default:
 				return false, newInternalError("The value must be a number")
@@ -314,8 +319,8 @@ func Integer() Validating {
 			switch v := value.(type) {
 			case string:
 				return regexp.MustCompile(regexInteger).MatchString(v), nil
-			case int8, int16, int32, int64,
-				uint8, uint16, uint32, uint64:
+			case int, int8, int16, int32, int64,
+				uint, uint8, uint16, uint32, uint64:
 				return true, nil
 			}
 			return false, nil
@@ -417,6 +422,8 @@ func Natural() Validating {
 			switch v := value.(type) {
 			case string:
 				return regexp.MustCompile(regexNatural).MatchString(v), nil
+			case int:
+				return v >= 0, nil
 			case int8:
 				return v >= 0, nil
 			case int16:
@@ -425,7 +432,7 @@ func Natural() Validating {
 				return v >= 0, nil
 			case int64:
 				return v >= 0, nil
-			case uint8, uint16, uint32, uint64:
+			case uint, uint8, uint16, uint32, uint64:
 				return true, nil
 			default:
 				return false, newInternalError("Cannot compare to zero")
@@ -442,8 +449,8 @@ func NaN() Validating {
 			switch v := value.(type) {
 			case float64:
 				return math.IsNaN(v), nil
-			case int8, int16, int32, int64,
-				uint8, uint16, uint32, uint64, float32:
+			case int, int8, int16, int32, int64,
+				uint, uint8, uint16, uint32, uint64, float32:
 				return false, nil
 			default:
 				return false, newInternalError("The value must be a number")
@@ -460,6 +467,8 @@ func NaturalNonZero() Validating {
 			switch v := value.(type) {
 			case string:
 				return regexp.MustCompile(regexNaturalNonZero).MatchString(v), nil
+			case int:
+				return v > 0, nil
 			case int8:
 				return v > 0, nil
 			case int16:
@@ -467,6 +476,8 @@ func NaturalNonZero() Validating {
 			case int32:
 				return v > 0, nil
 			case int64:
+				return v > 0, nil
+			case uint:
 				return v > 0, nil
 			case uint8:
 				return v > 0, nil
@@ -702,6 +713,8 @@ func isSignedNumber(any interface{}) bool {
 
 func isGreaterThanZero(any interface{}) (bool, error) {
 	switch v := any.(type) {
+	case int:
+		return v > 0, nil
 	case int8:
 		return v > 0, nil
 	case int16:
@@ -709,6 +722,8 @@ func isGreaterThanZero(any interface{}) (bool, error) {
 	case int32:
 		return v > 0, nil
 	case int64:
+		return v > 0, nil
+	case uint:
 		return v > 0, nil
 	case uint8:
 		return v > 0, nil
@@ -731,6 +746,8 @@ func tryConvertToUint64(v interface{}) (uint64, bool) {
 	switch _v := v.(type) {
 	case uint64:
 		return _v, true
+	case uint:
+		return uint64(_v), true
 	case uint32:
 		return uint64(_v), true
 	case uint16:
@@ -747,6 +764,8 @@ func tryConvertToFloat64(v interface{}) (float64, bool) {
 	case float64:
 		return _v, true
 	case float32:
+		return float64(_v), true
+	case int:
 		return float64(_v), true
 	case int64:
 		return float64(_v), true
