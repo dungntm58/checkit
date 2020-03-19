@@ -33,8 +33,13 @@ func (v Validator) ValidateSync(value interface{}) (bool, error) {
 func (v Validator) MayBeSync(value interface{}) (bool, error) {
 	var result bool = false
 	for keyPath, validating := range v {
-		r, _ := validateKeyPathWithValidating(value, keyPath, validating)
-		result = result || r
+		r, err := validateKeyPathWithValidating(value, keyPath, validating)
+		switch e := err.(type) {
+		case *internalError:
+			return false, e
+		default:
+			result = result || r
+		}
 	}
 	return result, nil
 }
@@ -60,8 +65,13 @@ func (w *wrappedKeyedValue) validateWithValidating(validating Validating) (bool,
 	if w.shouldValidateAny {
 		var result bool = false
 		for _, child := range w.children {
-			r, _ := child.validateWithValidating(validating)
-			result = result || r
+			r, err := child.validateWithValidating(validating)
+			switch e := err.(type) {
+			case *internalError:
+				return false, e
+			default:
+				result = result || r
+			}
 		}
 		return result, nil
 	}

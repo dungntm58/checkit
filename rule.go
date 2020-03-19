@@ -167,7 +167,7 @@ func Contains(v interface{}) Validating {
 		validateFunc: func(value interface{}) (bool, error) {
 			arr := reflect.ValueOf(value)
 			if arr.Kind() != reflect.Array && arr.Kind() != reflect.Slice {
-				return false, errors.New("The value must be an array or a slice")
+				return false, newInternalError("The value must be an array or a slice")
 			}
 			for i := 0; i < arr.Len(); i++ {
 				if arr.Index(i).Interface() == v {
@@ -215,7 +215,7 @@ func Empty() Validating {
 			case string:
 				return len(v) == 0, nil
 			default:
-				return false, errors.New("len() is not supported")
+				return false, newInternalError("len() is not supported")
 			}
 		},
 		errorMessage: "The value must be a empty collection.",
@@ -232,7 +232,7 @@ func ExactLength(length int) Validating {
 			case string:
 				return len(v) == length, nil
 			default:
-				return false, errors.New("len() is not supported")
+				return false, newInternalError("len() is not supported")
 			}
 		},
 		errorMessage: "The field must have the exact length of \"val\".",
@@ -263,7 +263,7 @@ func Finite() Validating {
 				uint8, uint16, uint32, uint64, float32:
 				return true, nil
 			default:
-				return false, errors.New("The value must be a number")
+				return false, newInternalError("The value must be a number")
 			}
 		},
 		errorMessage: "The value under validation must be a finite number.",
@@ -398,7 +398,7 @@ func Natural() Validating {
 			case uint8, uint16, uint32, uint64:
 				return true, nil
 			default:
-				return false, errors.New("Cannot compare to zero")
+				return false, newInternalError("Cannot compare to zero")
 			}
 		},
 		errorMessage: "The value must be a natural number (a number greater than or equal to 0).",
@@ -416,7 +416,7 @@ func NaN() Validating {
 				uint8, uint16, uint32, uint64, float32:
 				return false, nil
 			default:
-				return false, errors.New("The value must be a number")
+				return false, newInternalError("The value must be a number")
 			}
 		},
 		errorMessage: "The value under validation must be a NaN.",
@@ -447,7 +447,7 @@ func NaturalNonZero() Validating {
 			case uint64:
 				return v > 0, nil
 			default:
-				return false, errors.New("Cannot compare to zero")
+				return false, newInternalError("Cannot compare to zero")
 			}
 		},
 		errorMessage: "The value must be a natural number, greater than or equal to 1.",
@@ -567,7 +567,7 @@ func greatThanEqualTo(lhs interface{}, rhs interface{}) (bool, error) {
 	if lokString && rokString {
 		return lhsString >= rhsString, nil
 	} else if (lokString && !rokString) || (!lokString && rokString) {
-		return false, errors.New("Cannot compare a string to an instance of other type than string")
+		return false, newInternalError("Cannot compare a string to an instance of other type than string")
 	}
 
 	lhsDate, lokDate := lhs.(time.Time)
@@ -576,7 +576,7 @@ func greatThanEqualTo(lhs interface{}, rhs interface{}) (bool, error) {
 	if lokDate && rokDate {
 		return lhsDate.After(rhsDate) || lhsDate.Equal(rhsDate), nil
 	} else if (lokDate && !rokDate) || (!lokDate && rokDate) {
-		return false, errors.New("Cannot compare a date to an instance of other type than date")
+		return false, newInternalError("Cannot compare a date to an instance of other type than date")
 	}
 
 	lhsGreaterThanZero, lhsErr := isGreaterThanZero(lhs)
@@ -617,7 +617,7 @@ func lessThanEqualTo(lhs interface{}, rhs interface{}) (bool, error) {
 	if lokString && rokString {
 		return lhsString <= rhsString, nil
 	} else if (lokString && !rokString) || (!lokString && rokString) {
-		return false, errors.New("Cannot compare a string to an instance of other type than string")
+		return false, newInternalError("Cannot compare a string to an instance of other type than string")
 	}
 
 	lhsDate, lokDate := lhs.(time.Time)
@@ -626,7 +626,7 @@ func lessThanEqualTo(lhs interface{}, rhs interface{}) (bool, error) {
 	if lokDate && rokDate {
 		return lhsDate.Before(rhsDate) || lhsDate.Equal(rhsDate), nil
 	} else if (lokDate && !rokDate) || (!lokDate && rokDate) {
-		return false, errors.New("Cannot compare a date to an instance of other type than date")
+		return false, newInternalError("Cannot compare a date to an instance of other type than date")
 	}
 
 	lhsGreaterThanZero, lhsErr := isGreaterThanZero(lhs)
@@ -693,7 +693,7 @@ func isGreaterThanZero(any interface{}) (bool, error) {
 	case float64:
 		return v > 0, nil
 	default:
-		return false, errors.New("The value must be a number")
+		return false, newInternalError("The value must be a number")
 	}
 }
 
