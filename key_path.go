@@ -152,6 +152,14 @@ func getReferenceValue(value reflect.Value) interface{} {
 			arr = append(arr, el)
 		}
 		return arr
+	case reflect.Struct:
+		var rMap = make(map[string]interface{})
+		for i := 0; i < v.NumField(); i++ {
+			fieldName := v.Type().Field(i).Name
+			fieldValue := getReferenceValue(v.Field(i))
+			rMap[fieldName] = fieldValue
+		}
+		return rMap
 	default:
 		return nil
 	}
