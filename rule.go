@@ -63,8 +63,8 @@ func Accepted() Validating {
 	}
 }
 
-// Aplha ...
-func Aplha() Validating {
+// Alpha ...
+func Alpha() Validating {
 	return &validator{
 		validateFunc: func(value interface{}) (bool, error) {
 			return matchAnyWithRegex(regexAlpha, value)
@@ -73,8 +73,8 @@ func Aplha() Validating {
 	}
 }
 
-// AplhaDash ...
-func AplhaDash() Validating {
+// AlphaDash ...
+func AlphaDash() Validating {
 	return &validator{
 		validateFunc: func(value interface{}) (bool, error) {
 			return matchAnyWithRegex(regexAlphaDash, value)
@@ -83,8 +83,8 @@ func AplhaDash() Validating {
 	}
 }
 
-// AplhaNumeric ...
-func AplhaNumeric() Validating {
+// AlphaNumeric ...
+func AlphaNumeric() Validating {
 	return &validator{
 		validateFunc: func(value interface{}) (bool, error) {
 			return matchAnyWithRegex(regexAlphaNumeric, value)
@@ -93,8 +93,8 @@ func AplhaNumeric() Validating {
 	}
 }
 
-// AplhaUnderscore ...
-func AplhaUnderscore() Validating {
+// AlphaUnderscore ...
+func AlphaUnderscore() Validating {
 	return &validator{
 		validateFunc: func(value interface{}) (bool, error) {
 			return matchAnyWithRegex(regexAlphaUnderscore, value)
@@ -209,11 +209,10 @@ func Email() Validating {
 func Empty() Validating {
 	return &validator{
 		validateFunc: func(value interface{}) (bool, error) {
-			switch v := value.(type) {
-			case []interface{}:
-				return len(v) == 0, nil
-			case string:
-				return len(v) == 0, nil
+			val := reflect.ValueOf(value)
+			switch val.Kind() {
+			case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice, reflect.String:
+				return val.Len() == 0, nil
 			default:
 				return false, newInternalError("len() is not supported")
 			}
@@ -226,11 +225,10 @@ func Empty() Validating {
 func ExactLength(length int) Validating {
 	return &validator{
 		validateFunc: func(value interface{}) (bool, error) {
-			switch v := value.(type) {
-			case []interface{}:
-				return len(v) == length, nil
-			case string:
-				return len(v) == length, nil
+			val := reflect.ValueOf(value)
+			switch val.Kind() {
+			case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice, reflect.String:
+				return val.Len() == length, nil
 			default:
 				return false, newInternalError("len() is not supported")
 			}
@@ -377,6 +375,38 @@ func Luhn() Validating {
 			return matchAnyWithRegex(regexLuhn, value)
 		},
 		errorMessage: "The given value must pass a basic luhn (credit card) check regular expression.",
+	}
+}
+
+// MaxLength ...
+func MaxLength(length int) Validating {
+	return &validator{
+		validateFunc: func(value interface{}) (bool, error) {
+			val := reflect.ValueOf(value)
+			switch val.Kind() {
+			case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice, reflect.String:
+				return val.Len() <= length, nil
+			default:
+				return false, newInternalError("len() is not supported")
+			}
+		},
+		errorMessage: "The value must have a length property which is less than or equal to the specified value. Note, this may be used with both arrays and strings.",
+	}
+}
+
+// MinLength ...
+func MinLength(length int) Validating {
+	return &validator{
+		validateFunc: func(value interface{}) (bool, error) {
+			val := reflect.ValueOf(value)
+			switch val.Kind() {
+			case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice, reflect.String:
+				return val.Len() >= length, nil
+			default:
+				return false, newInternalError("len() is not supported")
+			}
+		},
+		errorMessage: "The value must have a length property which is greater than or equal to the specified value. Note, this may be used with both arrays and strings.",
 	}
 }
 
