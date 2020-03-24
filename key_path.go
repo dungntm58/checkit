@@ -63,7 +63,7 @@ func getValueForKey(key string, obj interface{}) interface{} {
 
 func getReflectKeyInMapKeys(mapKeys []reflect.Value, key string) reflect.Value {
 	for _, reflectKey := range mapKeys {
-		itKey := reflectKey.Interface()
+		itKey := getReferenceValue(reflectKey)
 		switch itVal := itKey.(type) {
 		case string:
 			if key == itVal {
@@ -160,6 +160,16 @@ func getReferenceValue(value reflect.Value) interface{} {
 			rMap[fieldName] = fieldValue
 		}
 		return rMap
+	case reflect.Map:
+		mapKeys := v.MapKeys()
+		if len(mapKeys) == 0 {
+			return nil
+		}
+		var rMap = make(map[interface{}]interface{})
+		for _, reflectKey := range mapKeys {
+			rMap[getReferenceValue(reflectKey)] = getReferenceValue(v.MapIndex(reflectKey))
+		}
+		return rMap
 	default:
 		return nil
 	}
@@ -181,12 +191,13 @@ func makeNormalWrappedKeyedValue(value interface{}, parent *wrappedKeyedValue) *
 
 func buildWrappedKeyValueWithKeys(keys []string, keyIndex int, value interface{}, parent *wrappedKeyedValue) {
 	if keyIndex == len(keys) {
+		parent.value = value
 		return
 	}
-	parent.value = nil
 	key := keys[keyIndex]
 	keyedValue := getValueForKey(key, value)
 	if keyedValue == nil {
+		parent.value = nil
 		return
 	}
 	switch key {
