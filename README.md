@@ -8,7 +8,7 @@ https://github.com/tgriesser/checkit
 
 I'm interested in Golang while I'm doing a blockchain platform project. My responsibility is contributing a RESTFul module to communicate with the core blockchain
 <br/>
-I wrote this lib with the first idea that helps me validate request body.
+I wrote this lib with the first idea that it would help me validate request body.
 <br/>
 It allows you to seamlessly validate full Golang structs, primitive type values, defining custom messages, labels, and validations.
 
