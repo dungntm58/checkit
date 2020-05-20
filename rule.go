@@ -140,7 +140,7 @@ func Between(min interface{}, max interface{}) Validating {
 			if lErr != nil {
 				return false, lErr
 			}
-			rCompare, rErr := lessThanEqualTo(min, value)
+			rCompare, rErr := lessThanEqualTo(value, max)
 			if rErr != nil {
 				return false, rErr
 			}
@@ -635,10 +635,10 @@ func greatThanEqualTo(lhs interface{}, rhs interface{}) (bool, error) {
 		return false, nil
 	}
 
-	isLHSSignedNumber := isSignedNumber(lhs)
-	isRHSSignedNumber := isSignedNumber(rhs)
+	isLHSUnsignedNumber := isUnsignedNumber(lhs)
+	isRHSUnsignedNumber := isUnsignedNumber(rhs)
 
-	if !isLHSSignedNumber || !isRHSSignedNumber {
+	if isLHSUnsignedNumber && isRHSUnsignedNumber {
 		lhsUint64, _ := tryConvertToUint64(lhs)
 		rhsUint64, _ := tryConvertToUint64(rhs)
 
@@ -685,10 +685,10 @@ func lessThanEqualTo(lhs interface{}, rhs interface{}) (bool, error) {
 		return true, nil
 	}
 
-	isLHSSignedNumber := isSignedNumber(lhs)
-	isRHSSignedNumber := isSignedNumber(rhs)
+	isLHSUnsignedNumber := isUnsignedNumber(lhs)
+	isRHSUnsignedNumber := isUnsignedNumber(rhs)
 
-	if !isLHSSignedNumber || !isRHSSignedNumber {
+	if isLHSUnsignedNumber && isRHSUnsignedNumber {
 		lhsUint64, _ := tryConvertToUint64(lhs)
 		rhsUint64, _ := tryConvertToUint64(rhs)
 
@@ -701,10 +701,10 @@ func lessThanEqualTo(lhs interface{}, rhs interface{}) (bool, error) {
 	return lhsFloat64 <= rhsFloat64, nil
 }
 
-func isSignedNumber(any interface{}) bool {
+func isUnsignedNumber(any interface{}) bool {
 	switch reflect.TypeOf(any).Kind() {
-	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.Float32, reflect.Float64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32,
+		reflect.Uint64:
 		return true
 	default:
 		return false

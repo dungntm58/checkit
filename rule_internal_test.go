@@ -32,7 +32,22 @@ func TestBase64(t *testing.T) {
 }
 
 func TestBetween(t *testing.T) {
-
+	r1, _ := Between(-3, -1).Validate(-2)
+	if !r1 {
+		t.Fail()
+	}
+	r2, _ := Between(1, 3).Validate(1)
+	if !r2 {
+		t.Fail()
+	}
+	r3, _ := Between(1, 3).Validate(3)
+	if !r3 {
+		t.Fail()
+	}
+	r11, _ := Between(1, 3).Validate(4)
+	if r11 {
+		t.Fail()
+	}
 }
 
 func TestBoolean(t *testing.T) {
